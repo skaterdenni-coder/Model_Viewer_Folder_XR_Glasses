@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AR Model Viewer - Folder Mode</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  
+  <style>
+    :root {
+      --bg: #f5f6f7; 
+      --text: #111; 
+      --muted: #555; 
+      --card: #fff; 
+      --border: #e6e6e6;
+      --btn2: #2d7d46;
+      --viewer-bg: #ffffff;
+    }
+
+    body.offwhite-mode {
+      --bg: #efebe2;    
+      --card: #fdfcf8;  
+      --border: #dcd7ca;
+      --viewer-bg: #efebe2;
+    }
+
+    * { box-sizing: border-box; transition: background-color 0.3s ease; }
+    body { margin: 0; font-family: Arial, sans-serif; background: var(--bg); color: var(--text); }
+    
+    .wrap { max-width: 980px; margin: 0 auto; padding: 26px 16px 42px; text-align: center; position: relative; }
+    
+    .theme-switch {
+      position: absolute; top: 20px; right: 16px;
+      background: var(--card); border: 1px solid var(--border);
+      padding: 8px 16px; border-radius: 20px; cursor: pointer;
+      font-size: 13px; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      z-index: 100;
+    }
+
+    h1 { margin: 6px 0 10px; font-size: 34px; font-weight: 800; }
+    
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 20px; margin: 14px auto; box-shadow: 0 1px 0 rgba(0,0,0,.03);
+    }
+    
+    .uploadBox {
+      background: rgba(45, 125, 70, 0.05); border: 2px dashed var(--btn2);
+      border-radius: 12px; padding: 40px 20px; text-align: center;
+      cursor: pointer; transition: all 0.3s;
+    }
+    .uploadBox:hover { background: rgba(45, 125, 70, 0.1); }
+    .uploadBox p { margin: 0; color: var(--muted); font-size: 16px; }
+    .uploadBox input { display: none; }
+    
+    #modelList { display: none; margin-top: 20px; text-align: left; }
+    .select-style {
+      width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--card); color: var(--text); font-size: 14px; outline: none;
+      cursor: pointer; margin-top: 8px;
+    }
+
+    .viewerBox {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 12px; margin-top: 18px; display: none;
+    }
+    .viewerBox.active { display: block; }
+    
+    model-viewer {
+      width: 100%; height: 60vh; min-height: 380px;
+      background-color: var(--viewer-bg);
+      border-radius: 12px; border: 1px solid var(--border);
+      --poster-color: var(--viewer-bg);
+    }
+    
+    .viewerBar { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 12px 0 0; }
+    button.ui {
+      border: 1px solid var(--border); background: var(--card); color: var(--text);
+      border-radius: 10px; padding: 10px 12px; font-weight: 700; cursor: pointer;
+    }
+    button.ui:hover { background: var(--bg); }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="theme-switch" id="themeToggle">🍦 Hintergrund ändern</div>
+
+    <h1>AR Model Viewer</h1>
+    <p>Wähle einen lokalen Ordner mit .glb Modellen aus</p>
+
+    <div class="card" id="uploadCard">
+      <div class="uploadBox" id="uploadBox">
+        <p>📁 Ordner öffnen (enthält .glb Dateien)</p>
+        <input type="file" id="fileInput" accept=".glb" webkitdirectory directory multiple />
+      </div>
+
+      <div id="modelList">
+        <label style="font-size: 12px; font-weight: bold; color: var(--muted);">Modell auswählen:</label>
+        <select id="modelSelector" class="select-style"></select>
+      </div>
+    </div>
+
+    <div class="card viewerBox" id="viewerBox">
+      <model-viewer id="mv" camera-controls ar ar-modes="webxr scene-viewer quick-look" bounds="tight"></model-viewer>
+      <div class="viewerBar">
+        <button class="ui" id="btnReset">↩️ Reset</button>
+        <button class="ui" id="btnFullscreen">⛶ Vollbild</button>
+        <button class="ui" id="btnAR">AR starten</button>
+      </div>
+      <p style="font-size: 11px; margin-top: 15px; color: #888;">Created by Simba</p>
+    </div>
+  </div>
+
+  <script>
+    const mv = document.getElementById('mv');
+    const viewerBox = document.getElementById('viewerBox');
+    const fileInput = document.getElementById('fileInput');
+    const uploadBox = document.getElementById('uploadBox');
+    const modelListDiv = document.getElementById('modelList');
+    const modelSelector = document.getElementById('modelSelector');
+    const themeToggle = document.getElementById('themeToggle');
+
+    let loadedFiles = {}; 
+
+    themeToggle.onclick = () => document.body.classList.toggle('offwhite-mode');
+
+    uploadBox.onclick = () => fileInput.click();
+
+    fileInput.onchange = (e) => {
+      const files = Array.from(e.target.files).filter(file => file.name.toLowerCase().endsWith('.glb'));
+      
+      if (files.length === 0) {
+        alert("Keine .glb Dateien in diesem Ordner gefunden!");
+        return;
+      }
+
+      modelSelector.innerHTML = "";
+      modelListDiv.style.display = "block";
+      loadedFiles = {};
+
+      files.forEach((file, index) => {
+        // Erzeugt eine lokale URL für die Datei im Browser-Speicher
+        const url = URL.createObjectURL(file);
+        loadedFiles[index] = { url: url };
+        const opt = document.createElement('option');
+        opt.value = index;
+        opt.textContent = file.name;
+        modelSelector.appendChild(opt);
+      });
+
+      loadSelectedModel(0);
+    };
+
+    modelSelector.onchange = (e) => loadSelectedModel(e.target.value);
+
+    function loadSelectedModel(index) {
+      const item = loadedFiles[index];
+      if (!item) return;
+
+      mv.src = item.url;
+      viewerBox.classList.add('active');
+    }
+
+    document.getElementById('btnReset').onclick = () => { mv.cameraOrbit = '0deg 75deg auto'; };
+    document.getElementById('btnFullscreen').onclick = () => { 
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        mv.requestFullscreen();
+      }
+    };
+    document.getElementById('btnAR').onclick = () => { mv.activateAR(); };
+  </script>
+</body>
+</html>
