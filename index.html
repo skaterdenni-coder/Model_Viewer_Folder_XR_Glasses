@@ -8,56 +8,68 @@
   
   <style>
     :root {
-      --bg: #f5f6f7; 
-      --text: #111; 
-      --muted: #555; 
-      --card: #fff; 
-      --border: #e6e6e6;
+      /* Standardmäßig echtes OLED-Schwarz */
+      --bg: #000000; 
+      --text: #ffffff; 
+      --muted: #aaaaaa; 
+      --card: #000000; 
+      --border: #333333;
       --btn2: #2d7d46;
+      --viewer-bg: #000000;
+    }
+
+    /* Der Switch wechselt nun bei Bedarf in einen hellen Modus */
+    body.light-mode {
+      --bg: #f5f6f7;  
+      --text: #111;  
+      --muted: #555;  
+      --card: #fff;  
+      --border: #e6e6e6;
       --viewer-bg: #ffffff;
     }
 
-    body.offwhite-mode {
-      --bg: #efebe2;    
-      --card: #fdfcf8;  
-      --border: #dcd7ca;
-      --viewer-bg: #efebe2;
-    }
-
-    * { box-sizing: border-box; transition: background-color 0.3s ease; }
+    * { box-sizing: border-box; transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease; }
     body { margin: 0; font-family: Arial, sans-serif; background: var(--bg); color: var(--text); }
     
-    .wrap { max-width: 980px; margin: 0 auto; padding: 26px 16px 42px; text-align: center; position: relative; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 26px 16px 42px; text-align: center; position: relative; background: var(--bg); }
     
     .theme-switch {
       position: absolute; top: 20px; right: 16px;
-      background: var(--card); border: 1px solid var(--border);
+      background: #222222; border: 1px solid var(--border); color: #fff;
       padding: 8px 16px; border-radius: 20px; cursor: pointer;
-      font-size: 13px; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      font-size: 13px; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
       z-index: 100;
     }
+    body.light-mode .theme-switch {
+      background: #fff; color: #111; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
 
-    h1 { margin: 6px 0 10px; font-size: 34px; font-weight: 800; }
+    h1 { margin: 6px 0 10px; font-size: 34px; font-weight: 800; color: var(--text); }
     
     .card {
       background: var(--card); border: 1px solid var(--border); border-radius: 14px;
-      padding: 20px; margin: 14px auto; box-shadow: 0 1px 0 rgba(0,0,0,.03);
+      padding: 20px; margin: 14px auto;
     }
     
     .uploadBox {
-      background: rgba(45, 125, 70, 0.05); border: 2px dashed var(--btn2);
+      background: #111111; border: 2px dashed var(--btn2);
       border-radius: 12px; padding: 40px 20px; text-align: center;
       cursor: pointer; transition: all 0.3s;
     }
-    .uploadBox:hover { background: rgba(45, 125, 70, 0.1); }
-    .uploadBox p { margin: 0; color: var(--muted); font-size: 16px; }
+    body.light-mode .uploadBox { background: rgba(45, 125, 70, 0.05); }
+    .uploadBox:hover { background: #1a1a1a; }
+    body.light-mode .uploadBox:hover { background: rgba(45, 125, 70, 0.1); }
+    .uploadBox p { margin: 0; color: var(--text); font-size: 16px; }
     .uploadBox input { display: none; }
     
     #modelList { display: none; margin-top: 20px; text-align: left; }
     .select-style {
       width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border);
-      background: var(--card); color: var(--text); font-size: 14px; outline: none;
+      background: #222222; color: #ffffff; font-size: 14px; outline: none;
       cursor: pointer; margin-top: 8px;
+    }
+    body.light-mode .select-style {
+      background: var(--card); color: var(--text);
     }
 
     .viewerBox {
@@ -75,19 +87,23 @@
     
     .viewerBar { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 12px 0 0; }
     button.ui {
-      border: 1px solid var(--border); background: var(--card); color: var(--text);
+      border: 1px solid var(--border); background: #222222; color: #ffffff;
       border-radius: 10px; padding: 10px 12px; font-weight: 700; cursor: pointer;
     }
-    button.ui:hover { background: var(--bg); }
+    body.light-mode button.ui {
+      background: var(--card); color: var(--text);
+    }
+    button.ui:hover { background: #333333; }
+    body.light-mode button.ui:hover { background: var(--bg); }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <div class="theme-switch" id="themeToggle">🍦 Hintergrund ändern</div>
+    <div class="theme-switch" id="themeToggle">💡 Modus wechseln</div>
 
     <h1>AR Model Viewer</h1>
-    <p>Wähle einen lokalen Ordner mit .glb Modellen aus</p>
+    <p style="color: var(--muted);">Wähle einen lokalen Ordner mit .glb Modellen aus</p>
 
     <div class="card" id="uploadCard">
       <div class="uploadBox" id="uploadBox">
@@ -102,13 +118,14 @@
     </div>
 
     <div class="card viewerBox" id="viewerBox">
-      <model-viewer id="mv" camera-controls ar ar-modes="webxr scene-viewer quick-look" bounds="tight"></model-viewer>
+      <!-- ar-scale="fixed" ist direkt integriert, damit das FoV in der Brille geschont bleibt -->
+      <model-viewer id="mv" camera-controls ar ar-modes="webxr scene-viewer quick-look" bounds="tight" ar-scale="fixed"></model-viewer>
       <div class="viewerBar">
         <button class="ui" id="btnReset">↩️ Reset</button>
         <button class="ui" id="btnFullscreen">⛶ Vollbild</button>
         <button class="ui" id="btnAR">AR starten</button>
       </div>
-      <p style="font-size: 11px; margin-top: 15px; color: #888;">Created by Simba</p>
+      <p style="font-size: 11px; margin-top: 15px; color: var(--muted);">Created by Simba</p>
     </div>
   </div>
 
@@ -123,7 +140,7 @@
 
     let loadedFiles = {}; 
 
-    themeToggle.onclick = () => document.body.classList.toggle('offwhite-mode');
+    themeToggle.onclick = () => document.body.classList.toggle('light-mode');
 
     uploadBox.onclick = () => fileInput.click();
 
@@ -140,7 +157,6 @@
       loadedFiles = {};
 
       files.forEach((file, index) => {
-        // Erzeugt eine lokale URL für die Datei im Browser-Speicher
         const url = URL.createObjectURL(file);
         loadedFiles[index] = { url: url };
         const opt = document.createElement('option');
@@ -161,6 +177,15 @@
       mv.src = item.url;
       viewerBox.classList.add('active');
     }
+
+    // WebXR-Skalierungs-Logik: Automatisch auf 50% beim AR-Start, um das FoV der Brille optimal zu nutzen
+    mv.addEventListener('ar-status', (event) => {
+      if (event.detail.status === 'object-placed' || event.detail.status === 'session-started') {
+        mv.scale = '0.5 0.5 0.5'; 
+      } else if (event.detail.status === 'not-presenting') {
+        mv.scale = '1 1 1'; 
+      }
+    });
 
     document.getElementById('btnReset').onclick = () => { mv.cameraOrbit = '0deg 75deg auto'; };
     document.getElementById('btnFullscreen').onclick = () => { 
