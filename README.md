@@ -1,4 +1,4 @@
-📦 AR Model Viewer (Folder Mode)
+📦 AR Model Viewer (Folder Mode)- Für XR-Glasses wie Rokid Max2 
 Ein webbasierter 3D-Modell-Viewer, der es ermöglicht, ganze Ordner mit .glb-Dateien zu laden, sie im Browser zu betrachten und per Cloud-Link für Augmented Reality (AR) zu teilen.
 
 ✨ Features
